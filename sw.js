@@ -1,5 +1,5 @@
 // Cache so do "casco" do app (codigo publico). Dados nunca passam por aqui (vao por POST ao Apps Script).
-var VERSION = 'contas-2';
+var VERSION = 'contas-3';
 var SHELL = ['./', 'index.html', 'app.js', 'config.js', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/apple-touch-icon.png'];
 self.addEventListener('install', function (e) { e.waitUntil(caches.open(VERSION).then(function (c) { return c.addAll(SHELL); })); self.skipWaiting(); });
 self.addEventListener('activate', function (e) {

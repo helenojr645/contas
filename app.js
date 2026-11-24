@@ -51,9 +51,9 @@
     fila.forEach(function (op) { m[op.id] = { pago: op.pago, data: op.data, quando: op.quando, local: true }; });
     return m;
   }
-  function itens() {
+  function itens(comPrevistos) {
     var c = (S && S.snapshot && S.snapshot.contas) || [], m = marcasEfetivas();
-    return c.filter(function (it) { return !it.previsto; }).map(function (it) {
+    return c.filter(function (it) { return comPrevistos || !it.previsto; }).map(function (it) {
       var x = {}; for (var k in it) x[k] = it[k];
       var mk = m[it.id];
       if (mk) { x.pagoEm = mk.pago ? mk.data : null; x.marcaLocal = !!mk.local; }
@@ -173,9 +173,10 @@
     $('#alerts').innerHTML = al;
 
     $('#tab-pend').innerHTML = renderPend(c);
+    $('#tab-cal').innerHTML = tab === 'cal' ? renderCal() : '';
     ligarLinhas();
     renderAvisos();
-    if (aberto) { var it = itens().filter(function (i) { return i.id === aberto; })[0]; if (it) $('#sheetBody').innerHTML = renderSheet(it); }
+    if (aberto) { var it = itens(true).filter(function (i) { return i.id === aberto; })[0]; if (it) $('#sheetBody').innerHTML = renderSheet(it); }
   }
 
   function renderVazio() {
@@ -250,32 +251,38 @@
       return '<div class="it ' + cls + '"><div class="dt">' + pd.getDate() + ' ' + MES3[pd.getMonth()] + ' ' + pd.getFullYear() + ' · ' + falta + '</div><div class="ti">' + esc(x.titulo) + '</div>' + (x.detalhe ? '<div class="de">' + esc(x.detalhe) + '</div>' : '') + '</div>';
     }).join('') + '</div>';
   }
+  function corDe(it, hs) { return it.pagoEm ? 'var(--ok)' : it.previsto ? 'var(--tx3)' : it.vencimento < hs ? 'var(--bad)' : 'var(--warn)'; }
   function renderCal() {
     var h = hojeD(); if (!calMes) calMes = new Date(h.getFullYear(), h.getMonth(), 1);
-    var y = calMes.getFullYear(), m = calMes.getMonth(), ini = new Date(y, m, 1), off = ini.getDay();
+    var y = calMes.getFullYear(), m = calMes.getMonth(), ini = new Date(y, m, 1), off = ini.getDay(), hs = iso(h);
     var porDia = {};
-    itens().forEach(function (it) { if (it.vencimento && !it.naoPague) (porDia[it.vencimento] = porDia[it.vencimento] || []).push(it); });
+    itens(true).forEach(function (it) { if (it.vencimento && !it.naoPague) (porDia[it.vencimento] = porDia[it.vencimento] || []).push(it); });
     var g = '<div class="cal"><div class="hd"><button class="ibtn" data-cal="-1" aria-label="Mês anterior">‹</button><b>' + MESES[m] + ' ' + y + '</b><button class="ibtn" data-cal="1" aria-label="Próximo mês">›</button></div><div class="grid">';
     ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].forEach(function (w) { g += '<div class="wd">' + w + '</div>'; });
-    var hs = iso(h);
     for (var i = 0; i < 42; i++) {
       var d = new Date(y, m, 1 - off + i), k = iso(d), its = porDia[k] || [];
       if (i >= 35 && d.getMonth() !== m) break;
-      var dots = its.slice(0, 6).map(function (it) {
-        var cor = it.pagoEm ? 'var(--ok)' : it.previsto ? 'var(--tx3)' : k < hs ? 'var(--bad)' : 'var(--warn)';
-        return '<i style="background:' + cor + '"></i>';
-      }).join('');
-      g += '<button class="day' + (d.getMonth() !== m ? ' out' : '') + (k === hs ? ' today' : '') + (k === calSel ? ' sel' : '') + '" data-day="' + k + '" aria-label="' + d.getDate() + ' de ' + MESES[d.getMonth()] + (its.length ? ', ' + its.length + ' conta(s)' : '') + '"><span>' + d.getDate() + '</span><span class="dots">' + dots + '</span></button>';
+      var fora = d.getMonth() !== m;
+      var chips = fora ? '' : its.slice(0, 3).map(function (it) {
+        return '<i class="ch" style="--c:' + corDe(it, hs) + '">' + esc(marca(it.fonte).ab) + '</i>';
+      }).join('') + (its.length > 3 && !fora ? '<i class="ch mais">+' + (its.length - 3) + '</i>' : '');
+      g += '<button class="day' + (fora ? ' out' : '') + (its.length && !fora ? ' tem' : '') + (k === hs ? ' today' : '') + (k === calSel ? ' sel' : '') + '" data-day="' + k + '" aria-label="' + d.getDate() + ' de ' + MESES[d.getMonth()] + (its.length ? ': ' + its.map(function (x) { return x.nome; }).join(', ') : '') + '"><span class="n">' + d.getDate() + '</span><span class="chips">' + chips + '</span></button>';
     }
     g += '</div><div class="legend"><span><i style="background:var(--warn)"></i>a pagar</span><span><i style="background:var(--bad)"></i>atrasada</span><span><i style="background:var(--ok)"></i>paga</span><span><i style="background:var(--tx3)"></i>prevista</span></div></div>';
-    var sel = calSel && porDia[calSel];
-    if (calSel) {
-      g += '<div class="grp"><h2>' + parse(calSel).getDate() + ' de ' + MESES[parse(calSel).getMonth()] + (sel ? ' <span class="s num">' + brl(soma(sel)) + '</span>' : '') + '</h2><div class="list">' +
-        (sel ? sel.map(function (i) { return linha(i, i.pagoEm ? 'pago' : null); }).join('') : '<div class="empty" style="padding:14px">Nenhuma conta neste dia</div>') + '</div></div>';
-    } else {
-      var mk = y + '-' + pad2(m + 1), noMes = itens().filter(function (it) { return it.vencimento && it.vencimento.slice(0, 7) === mk && !it.naoPague; });
-      g += '<p class="hint" style="margin-top:10px">' + noMes.length + ' contas em ' + MESES[m] + ' · ' + brl0(soma(noMes)) + ' · toque num dia</p>';
-    }
+
+    // lista do mes, dia a dia (ou so o dia tocado)
+    var mk = y + '-' + pad2(m + 1);
+    var dias_ = Object.keys(porDia).filter(function (k) { return calSel ? k === calSel : k.slice(0, 7) === mk; }).sort();
+    var doMes = [].concat.apply([], Object.keys(porDia).filter(function (k) { return k.slice(0, 7) === mk; }).map(function (k) { return porDia[k]; }));
+    var falta = doMes.filter(function (x) { return !x.pagoEm; });
+    g += '<div class="mesres"><span><b class="num">' + brl0(soma(doMes)) + '</b> em ' + MESES[m] + '</span><span>' + (falta.length ? 'falta <b class="num">' + brl0(soma(falta)) + '</b>' : 'tudo pago') + '</span></div>';
+    if (calSel) g += '<button class="lk" data-day="' + calSel + '" style="display:block;margin:2px auto 0">Mostrar o mês inteiro</button>';
+    if (!dias_.length) g += '<div class="empty" style="padding:22px">' + (calSel ? 'Nenhuma conta neste dia' : 'Nenhuma conta neste mês') + '</div>';
+    dias_.forEach(function (k) {
+      var l = porDia[k], dd = parse(k);
+      g += '<div class="grp"><h2>' + SEM[dd.getDay()].slice(0, 3) + ', ' + dd.getDate() + ' de ' + MESES[dd.getMonth()] + ' <span class="s num">' + (l.some(function (x) { return x.valor != null; }) ? brl(soma(l)) : '') + '</span></h2><div class="list">' +
+        l.map(function (x) { return linha(x, x.pagoEm ? 'pago' : null); }).join('') + '</div></div>';
+    });
     return g;
   }
 
@@ -363,7 +370,7 @@
     marcar(it, false);
     toast('Pagamento desmarcado', function () { marcar(it, true, it.pagoEm); });
   }
-  function porId(id) { return itens().filter(function (i) { return i.id === id; })[0]; }
+  function porId(id) { return itens(true).filter(function (i) { return i.id === id; })[0]; }
 
   // ---------- gestos ----------
   function ligarLinhas() {
@@ -399,7 +406,7 @@
     if (t.closest('[data-check]') && row) { e.stopPropagation(); var it = porId(row.dataset.id); if (it.pagoEm) despagar(it); else pagar(it); return; }
     if (row) { if (row.dataset.swiped) { delete row.dataset.swiped; return; } abrir(row.dataset.id); return; }
     var o = t.closest('[data-open]'); if (o) { abrir(o.getAttribute('data-open')); if (o.classList.contains('next')) { var it2 = porId(o.getAttribute('data-open')); if (it2 && it2.codigo && !it2.naoPague && !it2.alerta) copiar(it2.codigo); } return; }
-    var tb = t.closest('[data-tab]'); if (tb) { tab = tb.dataset.tab; $$('[data-tab]').forEach(function (b) { b.setAttribute('aria-selected', b === tb); }); ['pend', 'cal', 'pagas', 'prazos'].forEach(function (k) { $('#tab-' + k).classList.toggle('hide', k !== tab); }); $('#hint').classList.toggle('hide', tab !== 'pend' && tab !== 'pagas'); return; }
+    var tb = t.closest('[data-tab]'); if (tb) { tab = tb.dataset.tab; $$('[data-tab]').forEach(function (b) { b.setAttribute('aria-selected', b === tb); }); ['pend', 'cal'].forEach(function (k) { $('#tab-' + k).classList.toggle('hide', k !== tab); }); $('#hint').classList.toggle('hide', tab !== 'pend'); render(); window.scrollTo(0, 0); return; }
     var cm = t.closest('[data-cal]'); if (cm) { calMes = new Date(calMes.getFullYear(), calMes.getMonth() + (+cm.dataset.cal), 1); calSel = null; render(); return; }
     var dy = t.closest('[data-day]'); if (dy) { calSel = calSel === dy.dataset.day ? null : dy.dataset.day; render(); return; }
     var cp = t.closest('[data-copy]'); if (cp) { copiar(cp.getAttribute('data-copy')); return; }

@@ -110,7 +110,7 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(-
 .row .face{position:relative;display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--card);border:1px solid var(--line);border-radius:var(--r);width:100%;text-align:left;transition:transform .25s cubic-bezier(.2,.8,.2,1)}
 .row.dragging .face{transition:none}
 .row.prev .face{background:var(--bg2);border-style:dashed}
-.row.paid .face{opacity:.72}
+.row.paid .face>.logo,.row.paid .face>.mid,.row.paid .face>.rgt{opacity:.6}
 .logo{flex:none;width:44px;height:44px;border-radius:13px;display:grid;place-items:center;font-weight:800;font-size:15px;color:#fff;letter-spacing:-.02em;position:relative}
 .row.paid .logo::after{content:"";position:absolute;right:-4px;bottom:-4px;width:18px;height:18px;border-radius:50%;background:var(--ok) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23062a1a' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center/12px no-repeat;border:2px solid var(--card)}
 .mid{min-width:0;flex:1}
@@ -155,6 +155,17 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(-
 .cal .dots i{width:6px;height:6px;border-radius:50%}
 .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--tx2);margin:10px 4px 0}
 .legend i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}
+.seg.two{grid-template-columns:1fr 1fr}
+.cal .day{aspect-ratio:auto;min-height:54px;padding:5px 1px 4px;justify-content:flex-start}
+.cal .day .n{font-size:13.5px;line-height:1}
+.cal .day.tem .n{font-weight:800}
+.cal .chips{display:flex;flex-direction:column;align-items:center;gap:2px;width:100%}
+.cal .ch{font-style:normal;font-size:9.5px;font-weight:800;letter-spacing:.02em;line-height:1;padding:2px 0;width:calc(100% - 6px);max-width:38px;border-radius:5px;text-align:center;color:var(--c);background:color-mix(in srgb,var(--c) 18%,transparent)}
+.cal .ch.mais{--c:var(--tx2)}
+.cal .day.sel .ch{color:var(--acc-tx);background:rgba(0,0,0,.14)}
+.mesres{display:flex;justify-content:space-between;gap:12px;font-size:14px;color:var(--tx2);margin:14px 4px 4px}
+.mesres b{color:var(--tx)}
+@media (min-width:768px){.cal .day{min-height:78px}.cal .ch{font-size:11px;max-width:56px;padding:3px 0}}
 
 /* prazos */
 .tl{position:relative;margin-top:12px;padding-left:22px}
@@ -233,7 +244,7 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(-
   .layout{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:24px;align-items:start}
   .side{position:sticky;top:16px}
   .side .cal{margin-top:0}
-  .tabs .seg{max-width:560px}
+  .tabs .seg{max-width:none}
   .sheet{left:auto;right:24px;bottom:24px;top:24px;width:440px;border-radius:24px;max-height:none;border:1px solid var(--line);transform:translateX(120%)}
   .sheet.on{transform:none}
   .sheet .grab{display:none}
@@ -275,7 +286,9 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(-
       <div class="sub" id="heroS"></div>
     </section>
     <div id="alerts"></div>
+    <nav class="tabs" aria-label="Visão"><div class="seg two" role="tablist"><button role="tab" data-tab="pend" aria-selected="true">A pagar</button><button role="tab" data-tab="cal" aria-selected="false">Calendário</button></div></nav>
     <section id="tab-pend"></section>
+    <section id="tab-cal" class="hide"></section>
     <p class="hint" id="hint">Toque numa conta para copiar o código · deslize para a direita quando pagar</p>
     <div id="avisos"></div>
   </main>
